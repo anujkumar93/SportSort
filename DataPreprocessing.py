@@ -8,15 +8,16 @@ import glob
 import matplotlib.pyplot as plt
 %matplotlib inline
 
-sports = ['Walking','Running','Skating','Badminton','Basketball']
+sports = ['Badminton','Basketball','Running','Skating','Walking']
 
 for sport in sports:
-    source_dir='../Data/' + sport
-    finalOutputFile='../Data/' + sport + 'Final.csv'
+    source_dir='Data/' + sport
+    finalOutputFile='Data/' + sport + 'Final.csv'
     outputFileAcc=finalOutputFile[:len(finalOutputFile)-4]+'_Acc'+finalOutputFile[len(finalOutputFile)-4:]
     outputFileGyro=finalOutputFile[:len(finalOutputFile)-4]+'_Gyro'+finalOutputFile[len(finalOutputFile)-4:]
 
     secondsToKeep=30
+    trimLength = 2
 
     file_list = glob.glob(source_dir + '/*.csv')
 
@@ -49,46 +50,56 @@ for sport in sports:
                     lines=fileStream.readlines()
                     totalNumOfLines=len(lines)
                     secondCounter=totalNumOfLines-counter
-                    
                     print '1st sensor samples          =', counter
                     print '2nd sensor samples          =', secondCounter
                     
+                    # break data into two sets - for two sensors
+                    firstSensorLines = lines[:counter] # size = counter
+                    secondSensorLines = lines[counter:] # size = secondCounter
                     if secondCounter<counter:
-                        #random_lineNum=random.sample(range(counter), secondCounter)
-                        #random_lineNum.sort()
-                        #random_lines=[lines[i] for i in random_lineNum]
-                        diff = counfloorter - secondCounter
+                        # subsampling of larger counted sensor data
+                        diff = counter - secondCounter
                         step = counter / diff
                         toDelete = np.zeros(diff)
-                        for i in range(diff):
-                            toDelete[i] = int(np.floor(i*step))
+                        for j in range(diff):
+                            toDelete[j] = int(np.floor(j*step))
+                            
                         subsample_lineNum = np.delete(np.arange(counter,dtype=np.int32), toDelete)
-                        subsample_lines=[lines[i] for i in subsample_lineNum]
-                        finalCounterLines=subsample_lines[0:secondCounter-(secondCounter%(50*secondsToKeep))]
-                        finalSecondCounterLines=lines[counter:counter+(secondCounter-(secondCounter%(50*secondsToKeep)))]
+                        subsample_lines=[lines[ind] for ind in subsample_lineNum]
+                        # trimming
+                        if len(subsample_lines) > 2*50*trimLength:
+                            subsample_lines = subsample_lines[50*trimLength:len(subsample_lines)-50*trimLength]
+                            secondSensorLines = secondSensorLines[50*trimLength:len(secondSensorLines)-50*trimLength]
+                            
+                        # saving
+                        linesToKeep = len(subsample_lines)-(len(subsample_lines)%(50*secondsToKeep))
+                        finalCounterLines=subsample_lines[0:linesToKeep]
+                        finalSecondCounterLines=secondSensorLines[0:linesToKeep]
                     elif secondCounter>counter:
-                        #random_lineNum=random.sample(range(secondCounter), counter)
-                        #random_lineNum.sort()
-                        #random_lines=[lines[counter+i] for i in random_lineNum]
                         diff = secondCounter - counter
-                        step = np.floor(secondCounter / diff)
+                        step = secondCounter / diff
                         toDelete = np.zeros(diff)
-                        for i in range(diff):
-                            toDelete[i] = int(np.floor(i*step))
+                        for j in range(diff):
+                            toDelete[j] = int(np.floor(j*step))
+                            
                         subsample_lineNum = np.delete(np.arange(secondCounter,dtype=np.int32), toDelete)
-                        subsample_lines=[lines[counter+i] for i in subsample_lineNum]
-                        finalCounterLines=lines[:counter-(counter%(50*secondsToKeep))]
-                        finalSecondCounterLines=subsample_lines[0:counter-(counter%(50*secondsToKeep))]
+                        subsample_lines=[lines[counter+ind] for ind in subsample_lineNum]
+                        
+                        if len(subsample_lines) > 2*50*trimLength:
+                            firstSensorLines = firstSensorLines[50*trimLength:len(firstSensorLines)-50*trimLength]
+                            subsample_lines = subsample_lines[50*trimLength:len(subsample_lines)-50*trimLength]
+                            
+                        linesToKeep = len(subsample_lines)-(len(subsample_lines)%(50*secondsToKeep))
+                        finalCounterLines=firstSensorLines[0:linesToKeep]
+                        finalSecondCounterLines=subsample_lines[0:linesToKeep]
                     else:
-                        finalCounterLines=lines[:counter-(counter%(50*secondsToKeep))]
-                        finalSecondCounterLines=lines[counter:counter+(secondCounter-(secondCounter%(50*secondsToKeep)))]
-                    trimLength = 15
-                    if len(finalCounterLines) > 2*50*trimLength and len(finalSecondCounterLines) > 2*50*trimLength:
-                        finalCounterLines = finalCounterLines[50*trimLength:len(finalCounterLines)-50*trimLength]
-                        finalSecondCounterLines = finalSecondCounterLines[50*trimLength:len(finalSecondCounterLines)-50*trimLength]
-                    else:
-                        finalCounterLines = []
-                        finalSecondCounterLines = []
+                        if len(subsample_lines) > 2*50*trimLength:
+                            firstSensorLines = firstSensorLines[50*trimLength:len(firstSensorLines)-50*trimLength]
+                            secondSensorLines = secondSensorLines[50*trimLength:len(secondSensorLines)-50*trimLength]
+                            
+                        linesToKeep = len(secondSensorLines)-(len(secondSensorLines)%(50*secondsToKeep))
+                        finalCounterLines=firstSensorLines[:linesToKeep]
+                        finalSecondCounterLines=secondSensorLines[:linesToKeep]
                         
                     print 'Adjusted 1st sensor samples =', len(finalCounterLines)
                     print 'Adjusted 2nd sensor samples =', len(finalSecondCounterLines)
