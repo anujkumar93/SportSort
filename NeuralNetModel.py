@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-import NeuralNetHelperFunctions as hf
+import ClassifierHelperFunctions as hf
 
 class NeuralNetModel:
     def __init__(self, sess, num_components=100, channels=6, num_classes=5, hidden_sizes=[1024, 1024]):
