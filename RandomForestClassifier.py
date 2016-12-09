@@ -18,9 +18,13 @@ def run_random_forest_classifier(sports=['Badminton', 'Basketball', 'Foosball', 
 
     data = hf.load_data(featuresFile, labelsFile)
 
-    train_features = data['train_features'].reshape((-1, freqDims * timeDims, channels))
+    if "sec" in featuresFile.lower():
+        train_features = data['train_features'].reshape((-1, 16*timeDims*channels + 15*timeDims))
+        test_features  = data['test_features'].reshape((-1, 16*timeDims*channels + 15*timeDims))
+    else:
+        train_features = data['train_features'].reshape((-1, freqDims * timeDims, channels))
+        test_features  = data['test_features'].reshape((-1, freqDims * timeDims, channels))
     train_labels   = data['train_labels']
-    test_features  = data['test_features'].reshape((-1, freqDims * timeDims, channels))
     test_labels    = data['test_labels']
 
     print 'Data loaded!'
@@ -32,27 +36,30 @@ def run_random_forest_classifier(sports=['Badminton', 'Basketball', 'Foosball', 
     #                     {'pca__n_components' : [100,200,400], 'classifier__min_samples_split' : [5,10],
     #                      'classifier__criterion' : ['gini','entropy'], 'classifier__n_estimators' : [15,25]
     #                      }
-                       {'pca' : [None], 'classifier__min_samples_split' : [5,10],
+                       { 'classifier__min_samples_split' : [5,10],
                          'classifier__criterion' : ['gini','entropy'], 'classifier__n_estimators' : [15,25]
                          }
                         ] #prepared the range of parameters to search over for GridSearchCV
 
+    if "sec" not in featuresFile.lower():
+        print '\nReducing dimensionality using PCA...'
 
-    print '\nReducing dimensionality using PCA...'
+        reduced_train_features = np.zeros((train_features.shape[0],num_pca_component,channels))
+        reduced_test_features = np.zeros((test_features.shape[0],num_pca_component,channels))
 
-    reduced_train_features = np.zeros((train_features.shape[0],num_pca_component,channels))
-    reduced_test_features = np.zeros((test_features.shape[0],num_pca_component,channels))
+        for c in range(channels):
+            pca = PCA(n_components=num_pca_component, whiten=pca_whiten)
+            reduced_train_features[:,:,c] = pca.fit_transform(train_features[:,:,c])
+            reduced_test_features[:,:,c]  = pca.transform(test_features[:,:,c])
 
-    for c in range(channels):
-        pca = PCA(n_components=num_pca_component, whiten=pca_whiten)
-        reduced_train_features[:,:,c] = pca.fit_transform(train_features[:,:,c])
-        reduced_test_features[:,:,c]  = pca.transform(test_features[:,:,c])
+        print 'Dimensionality reduced!'
+        print 'Old feature dimensions:', train_features.shape[1]*train_features.shape[2]
+        print 'New feature dimensions:', reduced_train_features.shape[1]*reduced_train_features.shape[2]
+    else:
+        reduced_train_features = train_features
+        reduced_test_features = test_features
 
-    print 'Dimensionality reduced!'
-    print 'Old feature dimensions:', train_features.shape[1]*train_features.shape[2]
-    print 'New feature dimensions:', reduced_train_features.shape[1]*reduced_train_features.shape[2]
-
-    pipeline = Pipeline([ ("pca",pca),("classifier", random_forest)])
+    pipeline = Pipeline([("classifier", random_forest)])
     pipeline_grid = GridSearchCV(pipeline, tuned_parameters, cv = 5, n_jobs=-1)
     train_labels   = np.argmax(train_labels, 1)
 
