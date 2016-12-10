@@ -1,10 +1,14 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import numpy as np
 import glob
 import os
 
 def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Skating','Walking'],
                        secondsToKeep=30,
-                       trimLength=15):
+                       trimLength=15,
+                       newPerson=False):
     """
     Pre-processes the raw data files to make sure the data from both sensors is of the same size.
     Discards some amount of raw data at the start and end of the files to remove miscellaneous activity
@@ -13,11 +17,14 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
     :param sports: List of sport names involved
     :param secondsToKeep: Number of seconds to keep in each sample
     :param trimLength: Number of seconds to trim at the start and enf of a raw data file
-    :return: finalOutputFile
+    :param newPerson: Set True to generate unseen test data
+    :return: Nothing
     """
     for sport in sports:
         source_dir      = '../Data/' + sport
         finalOutputFile = '../Data/' + sport + '/Final.csv'
+        if newPerson:
+            finalOutputFile = '../Data/' + sport + '/newPersonFinal.csv'
         outputFileAcc   = finalOutputFile[:len(finalOutputFile)-4]+'_Acc'+finalOutputFile[len(finalOutputFile)-4:]
         outputFileGyro  = finalOutputFile[:len(finalOutputFile)-4]+'_Gyro'+finalOutputFile[len(finalOutputFile)-4:]
 
@@ -26,11 +33,20 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
         with open(outputFileAcc,'w') as outFileAcc:
             with open(outputFileGyro,'w') as outFileGyro:
                 for i in range(len(file_list)):
-                    with open(file_list[i], 'r') as fileStream:
+                    # avoiding files with 'Final' in its name
+                    if 'Final' in file_list[i]:
+                        continue
 
-                        if file_list[i] == finalOutputFile or file_list[i] == outputFileAcc or file_list[i] == outputFileGyro:
+                    if newPerson:
+                        # avoiding files with 'newPerson' NOT in its name
+                        if 'newPerson' not in file_list[i]:
+                            continue
+                    else:
+                        # avoiding files with 'newPerson' in its name
+                        if 'newPerson' in file_list[i]:
                             continue
 
+                    with open(file_list[i], 'r') as fileStream:
                         counter=1
                         firstSensor  = "Accelerometer"
                         secondSensor = "Gyroscope"

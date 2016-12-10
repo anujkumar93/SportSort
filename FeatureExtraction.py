@@ -1,12 +1,17 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import numpy as np
 import scipy.fftpack
 import FeatureExtractionHelperFunctions as fehp
+import os
 
 
 def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Skating','Walking'],
                        numSecondsPerImage=30,
                        fftWidth=6,
-                       fftJump=2):
+                       fftJump=2,
+                       newPerson=False):
     """
     Extracts features for the samples which are meant to be fed to a classifier later.
     Final features are:
@@ -20,16 +25,17 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
         - 3rd dim:        sensor channel
         - 1st dim:        has 16 rows corresponding to following calculations on raw data
         #     The 16 rows are: 1.mean; 2.standard deviation; 3.coefficient of variation; 4.peak-to-peak amplitude
-        #     5-9.10th, 25th, 50th, 75th, 90th percentiles; 10.inter-quartile range; 11.lag-one autocorrelation; 
+        #     5-9.10th, 25th, 50th, 75th, 90th percentiles; 10.inter-quartile range; 11.lag-one autocorrelation;
         #     12.skewedness; 13.kurtosis; 14.signal power; 15.log-energy; 16.zero-crossings
         Once this matrix is converted to a 2D array, we add another set of features to this, which correlates each
-        of the 6 channels, further producing 15 new feature columns. 
+        of the 6 channels, further producing 15 new feature columns.
 
     :param sports:
     :param numSecondsPerImage:
     :param fftWidth:
     :param fftJump:
-    :return: 3 outputFiles containing FFT features data, statistical features data, and labels data
+    :param newPerson: Set True to generate unseen test data
+    :return: Nothing
     """
 
     numColumns = (numSecondsPerImage - fftWidth) / fftJump + 1  # total no of columns to include in one image
@@ -42,6 +48,14 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
         print '\n'+sports[ind]
 
         fileName = '../Data/' + sports[ind] + '/Final.csv'
+        if newPerson:
+            fileName = '../Data/' + sports[ind] + '/newPersonFinal.csv'
+
+        if os.path.exists(fileName) and os.path.getsize(fileName) > 0:
+            pass
+        else:
+            print 'Nothing to load'
+            continue
 
         data = np.loadtxt(fileName, dtype='string', delimiter=', ')
         counter = 1
@@ -107,11 +121,10 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
         # x_secondSensor2 = np.linspace(0, 25, fft_secondSensor2.size / 2)
         # x_secondSensor3 = np.linspace(0, 25, fft_secondSensor3.size / 2)
 
-        
         # 6 is the number of sensors, finalMatrix corresponds to FFT features, secondaryMatrix corresponds to statistical
         finalMatrix = np.zeros((((50 * fftWidth) / 2), numColumns, 6, totalNumOfLines / (50 * 2 * numSecondsPerImage)))
         secondaryMatrix = np.zeros((16, numColumns, 6, totalNumOfLines / (50 * 2 * numSecondsPerImage)))
-        
+
         for n in range(finalMatrix.shape[3]):
             for j in range(finalMatrix.shape[1]):
                 for k in range(3):
@@ -207,7 +220,7 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
 
         secondaryIntermediateArray = np.reshape(secondaryMatrix, (finalMatrix.shape[3], -1))
 
-        #seventeenthFeatureMatrix is created to add the channel correlations to the statistical feature data
+        # seventeenthFeatureMatrix is created to add the channel correlations to the statistical feature data
         seventeenthFeatureMatrix = np.zeros((15, numColumns, totalNumOfLines / (50 * 2 * numSecondsPerImage)))
         #     temp=np.zeros((50*fftWidth,numColumns,totalNumOfLines/(50*2*numSecondsPerImage)))
 
@@ -265,9 +278,14 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
     print 'outputSecondaryArray.shape: ', outputSecondaryArray.shape
     print 'outputLabels.shape: ', outputLabels.shape
 
-    np.savetxt('../Data/featuresFinal.csv', outputArray, delimiter=', ')
-    np.savetxt('../Data/secondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
-    np.savetxt('../Data/labelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
+    if newPerson:
+        np.savetxt('../Data/newPersonFeaturesFinal.csv', outputArray, delimiter=', ')
+        np.savetxt('../Data/newPersonSecondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
+        np.savetxt('../Data/newPersonLabelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
+    else:
+        np.savetxt('../Data/featuresFinal.csv', outputArray, delimiter=', ')
+        np.savetxt('../Data/secondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
+        np.savetxt('../Data/labelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
 
 ################################################################
 ## PLOTTING

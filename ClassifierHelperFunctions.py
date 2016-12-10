@@ -1,5 +1,9 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import numpy as np
 import tensorflow as tf
+import sys
 
 
 def weight_var(shape):
@@ -19,16 +23,22 @@ def max_pool(x):
 def sample_fractions(labels):
     N, C = labels.shape
     fractions = np.zeros(C)
+    if N==0:
+        return fractions
+
     for i in range(C):
         fractions[i] = np.sum(np.equal(labels[:, i], np.ones(N)))
     fractions /= N
+
     return fractions
 
-def load_data(features_csv, labels_csv):
+def load_data(features_csv, labels_csv, newPerson=False):
     # loads data as a dictionary of numpy arrays
     data = {}
 
     data_split = np.array([80.0,20.0]) # split sizes for train and test sets
+    if newPerson:
+        data_split = np.array([0.0, 100.0])
 
     features = np.loadtxt(features_csv, dtype='float', delimiter=', ')
     labels = np.loadtxt(labels_csv, dtype='int', delimiter=', ')
@@ -48,13 +58,16 @@ def load_data(features_csv, labels_csv):
         shuffled_order = np.random.permutation(N)
         shuffled_labels = labels[shuffled_order]
 
-        train_fractions = sample_fractions(shuffled_labels[:index_test_start])
-        test_fractions = sample_fractions(shuffled_labels[index_test_start:])
-
-        ssd_train = np.sum((train_fractions - fractions_overall) ** 2)
-        ssd_test = np.sum((test_fractions - fractions_overall) ** 2)
-        if ssd_train<0.0005 and ssd_test<0.0005:
+        if newPerson:
             break
+        else:
+            train_fractions = sample_fractions(shuffled_labels[:index_test_start])
+            test_fractions = sample_fractions(shuffled_labels[index_test_start:])
+
+            ssd_train = np.sum((train_fractions - fractions_overall) ** 2)
+            ssd_test = np.sum((test_fractions - fractions_overall) ** 2)
+            if ssd_train<0.0005 and ssd_test<0.0005:
+                break
 
     assert shuffled_order is not None
     assert shuffled_labels is not None
@@ -84,3 +97,45 @@ def get_data_folds(k, num_folds, features, labels):
     val_fold_labels     = labels[start_index:end_index]
 
     return train_fold_features, train_fold_labels, val_fold_features, val_fold_labels
+
+class Logger(object):
+    """
+    Logger class to print stdout messages into a log file while displaying them in stdout also.
+    Pass filename to which to save when instantiating.
+    """
+    def __init__(self, f_log_name):
+        """
+        Initialization.
+        :param f_log_name: file path to which to write the logs
+        """
+        self.terminal = sys.stdout
+        self.log = open(f_log_name, 'w')
+
+    def write(self, message):
+        """
+        Actual logging operations.
+        :param message: The message to log.
+        :return: Nothing
+        """
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        """
+        Exists only to satisfy Python 3
+        :return: Nothing
+        """
+        pass
+
+    def close_log(self):
+        """
+        Closes the opened log file.
+        :return:
+        """
+        self.log.close()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Exists to close the log file in case user terminated the script, etc., and close_log is not explicitly called.
+        """
+        self.close_log()

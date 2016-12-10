@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import numpy as np
 import tensorflow as tf
 from sklearn.decomposition import PCA
@@ -35,15 +38,19 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
     print '\nLoading data...'
 
     data = hf.load_data('../Data/featuresFinal.csv', '../Data/labelsFinal.csv')
-
     train_features = data['train_features'].reshape((-1,freqDims*timeDims,channels))
     train_labels   = data['train_labels']
     test_features  = data['test_features'].reshape((-1,freqDims*timeDims,channels))
     test_labels    = data['test_labels']
 
+    newPerson_data = hf.load_data('../Data/newPersonFeaturesFinal.csv', '../Data/newPersonLabelsFinal.csv', newPerson=True)
+    newPerson_test_features = newPerson_data['test_features'].reshape((-1,freqDims*timeDims,channels))
+    newPerson_test_labels   = newPerson_data['test_labels']
+
     print 'Data loaded!'
-    print 'Training set:  ', train_features.shape[0]
-    print 'Test set:      ', test_features.shape[0]
+    print 'Training set:       ', train_features.shape[0]
+    print 'Test set:           ', test_features.shape[0]
+    print 'New person test set:', newPerson_test_features.shape[0]
 
 
     ################################################################
@@ -52,11 +59,13 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
 
     reduced_train_features = np.zeros((train_features.shape[0], num_pca_components, channels))
     reduced_test_features = np.zeros((test_features.shape[0], num_pca_components, channels))
+    reduced_newPerson_test_features = np.zeros((newPerson_test_features.shape[0], num_pca_components, channels))
 
     for c in range(channels):
         pca = PCA(n_components=num_pca_components, whiten=pca_whiten)
         reduced_train_features[:,:,c] = pca.fit_transform(train_features[:,:,c])
         reduced_test_features[:,:,c]  = pca.transform(test_features[:,:,c])
+        reduced_newPerson_test_features[:, :, c] = pca.transform(newPerson_test_features[:, :, c])
 
     print 'Dimensionality reduced!'
     print 'Old feature dimensions:', train_features.shape[1]*train_features.shape[2]
@@ -71,8 +80,8 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
     best_lr = None
     best_keep_prob = None
 
-    lrs = np.logspace(-2,1,10)
-    keep_probs = np.linspace(0.1,1,10)
+    lrs = np.logspace(-4,1,11)
+    keep_probs = np.linspace(0.2,1,5)
     num_folds = 4
 
     for lr in lrs:
@@ -131,15 +140,19 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
 
     print 'Model trained!'
 
-    print '\nACCURACY'
+    print '\n\nACCURACY'
 
     train_predictions = model.predict(reduced_train_features)
     train_acc = model.check_accuracy(train_predictions, np.argmax(train_labels, 1))
-    print 'On training set: %.4f' % train_acc
+    print 'On training set:        %.4f' % train_acc
 
     test_predictions = model.predict(reduced_test_features)
     test_acc = model.check_accuracy(test_predictions, np.argmax(test_labels, 1))
-    print 'On test set:     %.4f' % test_acc
+    print 'On test set:            %.4f' % test_acc
+
+    newPerson_test_predictions = model.predict(reduced_newPerson_test_features)
+    newPerson_test_acc = model.check_accuracy(newPerson_test_predictions, np.argmax(newPerson_test_labels, 1))
+    print 'On new person test set: %.4f' % newPerson_test_acc
 
     # close tensorflow session
     sess.close()
@@ -147,7 +160,7 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
 
     ################################################################
     ## ANALYZE FAILED CASES
-    print '\nTEST ERRORS (# of errors / # of test examples)'
+    print '\n\nTEST ERRORS (# of errors / # of test examples)'
 
     predicted_vs_truth_count_matrix = np.zeros([len(sports), len(sports)], dtype='int')
     for i in range(test_predictions.shape[0]):
@@ -158,3 +171,15 @@ def run_neural_net_classifier(sports=['Badminton', 'Basketball', 'Foosball', 'Ru
         num_actually_were       = np.sum(predicted_vs_truth_count_matrix[i, :])
         num_wrongly_predicted   = num_actually_were - num_correctly_predicted
         print sports[i] + ':\t', num_wrongly_predicted, '/', num_actually_were, '\t', predicted_vs_truth_count_matrix[i,:]
+
+    print '\n\nTEST ERRORS FOR NEW PERSON (# of errors / # of test examples)'
+
+    newPerson_predicted_vs_truth_count_matrix = np.zeros([len(sports), len(sports)], dtype='int')
+    for i in range(newPerson_test_predictions.shape[0]):
+        newPerson_predicted_vs_truth_count_matrix[np.argmax(newPerson_test_labels, 1)[i], newPerson_test_predictions[i]] += 1
+
+    for i in range(len(sports)):
+        num_correctly_predicted = newPerson_predicted_vs_truth_count_matrix[i, i]
+        num_actually_were = np.sum(newPerson_predicted_vs_truth_count_matrix[i, :])
+        num_wrongly_predicted = num_actually_were - num_correctly_predicted
+        print sports[i] + ':\t', num_wrongly_predicted, '/', num_actually_were, '\t', newPerson_predicted_vs_truth_count_matrix[i, :]

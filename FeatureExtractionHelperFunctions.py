@@ -1,4 +1,8 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import numpy as np
+import os
 
 
 def file_len(fname):
@@ -7,11 +11,13 @@ def file_len(fname):
     :param fname: file path
     :return: number of lines in the file (int)
     """
-    # returns number of lines in a file
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1
+    if os.path.exists(fname) and os.path.getsize(fname) > 0:
+        with open(fname) as f:
+            for i, l in enumerate(f):
+                pass
+        return i + 1
+    else:
+        return 0
 
 def lag_one_autocorrelation(arra):
     denom=((np.std(arra))**2)*arra.size
