@@ -8,8 +8,7 @@ import os
 def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Skating','Walking'],
                        secondsToKeep=30,
                        trimLength=15,
-                       newPerson=False,
-                       switchAlgo=3):
+                       switchAlgo=0):
     """
     Pre-processes the raw data files to make sure the data from both sensors is of the same size.
     Discards some amount of raw data at the start and end of the files to remove miscellaneous activity
@@ -18,16 +17,19 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
     :param sports: List of sport names involved
     :param secondsToKeep: Number of seconds to keep in each sample
     :param trimLength: Number of seconds to trim at the start and enf of a raw data file
-    :param newPerson: Set True to generate unseen test data
+    :param switchAlgo: testing scenario...
+        -- 0: [FINAL/TRAINING] use only original data for training and testing (no newPerson, no singleTest)
+        -- 1: [FINAL/TRAINING] use everything as one block (no separate newPerson, singleTest; they go into training)
+        -- 2: [NEWPERSON/TEST] create for newPerson and singleTest for separate testing (use with 0)
+        -- 3: [NEWPERSON/TEST] create only for singleTest for separate testing (use with 4)
+        -- 4: [FINAL/TRAINING] create original + newPerson for training (use with 3)
     :return: Nothing
     """
     for sport in sports:
         source_dir      = '../Data/' + sport
         finalOutputFile = '../Data/' + sport + '/Final.csv'
-        if switchAlgo==1 and newPerson:
+        if switchAlgo==2 or switchAlgo==3:
             finalOutputFile = '../Data/' + sport + '/newPersonFinal.csv'
-        elif switchAlgo==2 and newPerson:
-            finalOutputFile = '../Data/' + sport + '/singleTestFinal.csv'
         outputFileAcc   = finalOutputFile[:len(finalOutputFile)-4]+'_Acc'+finalOutputFile[len(finalOutputFile)-4:]
         outputFileGyro  = finalOutputFile[:len(finalOutputFile)-4]+'_Gyro'+finalOutputFile[len(finalOutputFile)-4:]
 
@@ -40,18 +42,20 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
                     if 'Final' in file_list[i]:
                         continue
 
-                    if switchAlgo==1 and newPerson:
-                        # avoiding files with 'newPerson' NOT in its name
-                        if 'newPerson' not in file_list[i]:
+                    if switchAlgo==0:
+                        # avoiding files with 'newPerson' or 'singleTest' in its name
+                        if 'newPerson' in file_list[i] or 'singleTest' in file_list[i]:
                             continue
-                    elif switchAlgo==1 and not newPerson:
-                        if 'newPerson' in file_list[i]:
+                    elif switchAlgo==2:
+                        # taking only files with 'newPerson' or 'singleTest' in its name
+                        if 'newPerson' not in file_list[i] and 'singleTest' not in file_list[i]:
                             continue
-                    if switchAlgo==2 and newPerson:
-                        # avoiding files with 'singleTest' NOT in its name
+                    elif switchAlgo==3:
+                        # taking only files with 'singleTest' in its name
                         if 'singleTest' not in file_list[i]:
                             continue
-                    elif switchAlgo==2 and not newPerson:
+                    elif switchAlgo==4:
+                        # avoid files 'singleTest' in its name
                         if 'singleTest' in file_list[i]:
                             continue
 

@@ -11,8 +11,7 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
                        numSecondsPerImage=30,
                        fftWidth=6,
                        fftJump=2,
-                       newPerson=False,
-                       switchAlgo=3):
+                       finalOrNew=0):
     """
     Extracts features for the samples which are meant to be fed to a classifier later.
     Final features are:
@@ -35,7 +34,7 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
     :param numSecondsPerImage:
     :param fftWidth:
     :param fftJump:
-    :param newPerson: Set True to generate unseen test data
+    :param finalOrNew: 0 for Final, 1 for newPerson
     :return: Nothing
     """
 
@@ -49,10 +48,8 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
         print '\n'+sports[ind]
 
         fileName = '../Data/' + sports[ind] + '/Final.csv'
-        if switchAlgo==1 and newPerson:
+        if finalOrNew == 1:
             fileName = '../Data/' + sports[ind] + '/newPersonFinal.csv'
-        elif switchAlgo==2 and newPerson:
-            fileName = '../Data/' + sports[ind] + '/singleTestFinal.csv'
 
         if os.path.exists(fileName) and os.path.getsize(fileName) > 0:
             pass
@@ -281,14 +278,10 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
     print 'outputSecondaryArray.shape: ', outputSecondaryArray.shape
     print 'outputLabels.shape: ', outputLabels.shape
 
-    if switchAlgo==1 and newPerson:
+    if finalOrNew == 1:
         np.savetxt('../Data/newPersonFeaturesFinal.csv', outputArray, delimiter=', ')
         np.savetxt('../Data/newPersonSecondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
         np.savetxt('../Data/newPersonLabelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
-    elif switchAlgo==2 and newPerson:
-        np.savetxt('../Data/singleTestFeaturesFinal.csv', outputArray, delimiter=', ')
-        np.savetxt('../Data/singleTestSecondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
-        np.savetxt('../Data/singleTestLabelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
     else:
         np.savetxt('../Data/featuresFinal.csv', outputArray, delimiter=', ')
         np.savetxt('../Data/secondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
