@@ -11,7 +11,8 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
                        numSecondsPerImage=30,
                        fftWidth=6,
                        fftJump=2,
-                       newPerson=False):
+                       newPerson=False,
+                       switchAlgo=3):
     """
     Extracts features for the samples which are meant to be fed to a classifier later.
     Final features are:
@@ -48,8 +49,10 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
         print '\n'+sports[ind]
 
         fileName = '../Data/' + sports[ind] + '/Final.csv'
-        if newPerson:
+        if switchAlgo==1 and newPerson:
             fileName = '../Data/' + sports[ind] + '/newPersonFinal.csv'
+        elif switchAlgo==2 and newPerson:
+            fileName = '../Data/' + sports[ind] + '/singleTestFinal.csv'
 
         if os.path.exists(fileName) and os.path.getsize(fileName) > 0:
             pass
@@ -278,10 +281,14 @@ def feature_extraction(sports=['Badminton','Basketball','Foosball','Running','Sk
     print 'outputSecondaryArray.shape: ', outputSecondaryArray.shape
     print 'outputLabels.shape: ', outputLabels.shape
 
-    if newPerson:
+    if switchAlgo==1 and newPerson:
         np.savetxt('../Data/newPersonFeaturesFinal.csv', outputArray, delimiter=', ')
         np.savetxt('../Data/newPersonSecondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
         np.savetxt('../Data/newPersonLabelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
+    elif switchAlgo==2 and newPerson:
+        np.savetxt('../Data/singleTestFeaturesFinal.csv', outputArray, delimiter=', ')
+        np.savetxt('../Data/singleTestSecondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')
+        np.savetxt('../Data/singleTestLabelsFinal.csv', outputLabels, fmt='%d', delimiter=', ')
     else:
         np.savetxt('../Data/featuresFinal.csv', outputArray, delimiter=', ')
         np.savetxt('../Data/secondaryFeaturesFinal.csv', outputSecondaryArray, delimiter=', ')

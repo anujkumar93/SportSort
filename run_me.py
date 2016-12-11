@@ -31,6 +31,7 @@ numSecondsPerImage_options = [15, 30]
 fftWidth_options = [1, 2, 6]
 fftJump_options = [1, 2]
 num_pca_components_options = [200, 400]
+algo_switch_options = [1, 2, 3]
 
 
 ################################################################
@@ -44,52 +45,57 @@ f_log_name = '../Results/' + os.path.basename(__file__) \
 logger = hf.Logger(f_log_name)
 sys.stdout = logger
 
+for algoSwitch in algo_switch_options:
+    
+    for numSecondsPerImage in numSecondsPerImage_options:
+        
+        dp.data_preprocessing(sports=sports, secondsToKeep=numSecondsPerImage, trimLength=trimLength,\
+                              switchAlgo=algoSwitch)
+        if algoSwitch!=3:
+            dp.data_preprocessing(sports=sports, secondsToKeep=numSecondsPerImage, trimLength=trimLength,\
+                              switchAlgo=algoSwitch, newPerson=True)
 
-for numSecondsPerImage in numSecondsPerImage_options:
+        for fftWidth in fftWidth_options:
+            for fftJump in fftJump_options:
 
-    dp.data_preprocessing(sports=sports, secondsToKeep=numSecondsPerImage, trimLength=trimLength)
-    dp.data_preprocessing(sports=sports, secondsToKeep=numSecondsPerImage, trimLength=trimLength, newPerson=True)
+                fe.feature_extraction(sports=sports, numSecondsPerImage=numSecondsPerImage, fftWidth=fftWidth,
+                                      fftJump=fftJump, switchAlgo=algoSwitch)
+                if algoSwitch!=3:
+                    fe.feature_extraction(sports=sports, numSecondsPerImage=numSecondsPerImage, fftWidth=fftWidth,
+                                      fftJump=fftJump, newPerson=True, switchAlgo=algoSwitch)
 
-    for fftWidth in fftWidth_options:
-        for fftJump in fftJump_options:
+                for num_pca_components in num_pca_components_options:
 
-            fe.feature_extraction(sports=sports, numSecondsPerImage=numSecondsPerImage, fftWidth=fftWidth,
-                                  fftJump=fftJump)
-            fe.feature_extraction(sports=sports, numSecondsPerImage=numSecondsPerImage, fftWidth=fftWidth,
-                                  fftJump=fftJump, newPerson=True)
+                    # Derived parameters
+                    freqDims = 50 * fftWidth / 2
+                    timeDims = (numSecondsPerImage - fftWidth) / fftJump + 1
 
-            for num_pca_components in num_pca_components_options:
+                    # Log current run parameters
+                    print 'sports =', sports
+                    print 'trimLength =', trimLength
+                    print 'numSecondsPerImage =', numSecondsPerImage
+                    print 'fftWidth =', fftWidth
+                    print 'fftJump =', fftJump
+                    print 'channels =', channels
+                    print 'num_pca_components =', num_pca_components
+                    print 'pca_whiten =', pca_whiten
+                    print 'hidden_sizes =', hidden_sizes
+                    print 'verbose =', verbose
+                    print 'show_val_acc =', show_val_acc
+                    print 'freqDims =', freqDims
+                    print 'timeDims =', timeDims
 
-                # Derived parameters
-                freqDims = 50 * fftWidth / 2
-                timeDims = (numSecondsPerImage - fftWidth) / fftJump + 1
+                    # CLASSIFIERS
 
-                # Log current run parameters
-                print 'sports =', sports
-                print 'trimLength =', trimLength
-                print 'numSecondsPerImage =', numSecondsPerImage
-                print 'fftWidth =', fftWidth
-                print 'fftJump =', fftJump
-                print 'channels =', channels
-                print 'num_pca_components =', num_pca_components
-                print 'pca_whiten =', pca_whiten
-                print 'hidden_sizes =', hidden_sizes
-                print 'verbose =', verbose
-                print 'show_val_acc =', show_val_acc
-                print 'freqDims =', freqDims
-                print 'timeDims =', timeDims
+                    nnc.run_neural_net_classifier(sports=sports, freqDims=freqDims, timeDims=timeDims,
+                                                  channels=channels, num_pca_components=num_pca_components,
+                                                  pca_whiten=pca_whiten, hidden_sizes=hidden_sizes, verbose=verbose,
+                                                  show_val_acc=show_val_acc)
 
-                # CLASSIFIERS
-
-                nnc.run_neural_net_classifier(sports=sports, freqDims=freqDims, timeDims=timeDims,
-                                              channels=channels, num_pca_components=num_pca_components,
-                                              pca_whiten=pca_whiten, hidden_sizes=hidden_sizes, verbose=verbose,
-                                              show_val_acc=show_val_acc)
-
-                rfc.run_random_forest_classifier(sports=sports, featuresFile='../Data/featuresFinal.csv',
-                                                 labelsFile='../Data/labelsFinal.csv', freqDims=freqDims,
-                                                 timeDims=timeDims, channels=channels,
-                                                 num_pca_components=num_pca_components, pca_whiten=pca_whiten)
+                    rfc.run_random_forest_classifier(sports=sports, featuresFile='../Data/featuresFinal.csv',
+                                                     labelsFile='../Data/labelsFinal.csv', freqDims=freqDims,
+                                                     timeDims=timeDims, channels=channels,
+                                                     num_pca_components=num_pca_components, pca_whiten=pca_whiten)
 
 
 ################################################################

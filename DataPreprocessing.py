@@ -8,7 +8,8 @@ import os
 def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Skating','Walking'],
                        secondsToKeep=30,
                        trimLength=15,
-                       newPerson=False):
+                       newPerson=False,
+                       switchAlgo=3):
     """
     Pre-processes the raw data files to make sure the data from both sensors is of the same size.
     Discards some amount of raw data at the start and end of the files to remove miscellaneous activity
@@ -23,8 +24,10 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
     for sport in sports:
         source_dir      = '../Data/' + sport
         finalOutputFile = '../Data/' + sport + '/Final.csv'
-        if newPerson:
+        if switchAlgo==1 and newPerson:
             finalOutputFile = '../Data/' + sport + '/newPersonFinal.csv'
+        elif switchAlgo==2 and newPerson:
+            finalOutputFile = '../Data/' + sport + '/singleTestFinal.csv'
         outputFileAcc   = finalOutputFile[:len(finalOutputFile)-4]+'_Acc'+finalOutputFile[len(finalOutputFile)-4:]
         outputFileGyro  = finalOutputFile[:len(finalOutputFile)-4]+'_Gyro'+finalOutputFile[len(finalOutputFile)-4:]
 
@@ -37,13 +40,19 @@ def data_preprocessing(sports=['Badminton','Basketball','Foosball','Running','Sk
                     if 'Final' in file_list[i]:
                         continue
 
-                    if newPerson:
+                    if switchAlgo==1 and newPerson:
                         # avoiding files with 'newPerson' NOT in its name
                         if 'newPerson' not in file_list[i]:
                             continue
-                    else:
-                        # avoiding files with 'newPerson' in its name
+                    elif switchAlgo==1 and not newPerson:
                         if 'newPerson' in file_list[i]:
+                            continue
+                    if switchAlgo==2 and newPerson:
+                        # avoiding files with 'singleTest' NOT in its name
+                        if 'singleTest' not in file_list[i]:
+                            continue
+                    elif switchAlgo==2 and not newPerson:
+                        if 'singleTest' in file_list[i]:
                             continue
 
                     with open(file_list[i], 'r') as fileStream:
